@@ -1,0 +1,32 @@
+bin/
+
+# Ignore all
+*
+
+# Unignore all with extensions
+!*.*
+
+# Unignore all docker files
+!*Docker*
+
+# Unignore all dirs
+!*/
+
+### Above combination will ignore all files without extension ###
+
+## .gitignore for mac os x
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+## visual studio code
+.vscode
+
+# Thumbnails
+._*
+
+# log
+*.log
+*_test.go
+.idea

@@ -1,0 +1,319 @@
+version: '2'
+
+networks:
+  at2chainnet:
+services:
+  ca.org1:
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-ca:amd64-1.3.0
+    restart: always
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-core
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org1.tfs.at2chain.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/f3cfd9ece201460db39e313c68cfecfa5355b7f8afd95552ad5a7ba325ff4f04_sk
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server-config/ca.org1.tfs.at2chain.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server-config/f3cfd9ece201460db39e313c68cfecfa5355b7f8afd95552ad5a7ba325ff4f04_sk -b admin:adminpw -d'
+    volumes:
+      - /mnt/fabric/ca.org1:/var/hyperledger/production
+      - ./crypto-config/peerOrganizations/org1.tfs.at2chain.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.org1.tfs.at2chain.com
+    networks:
+      - at2chainnet
+
+  ca.org2:
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-ca:amd64-1.3.0
+    restart: always
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-core
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org2.tfs.at2chain.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/e8e81c0fadfe529261b1173234daa8e125d0b9d708971a5ab431dc78a8c0b5f8_sk
+    ports:
+      - "8054:7054"
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server-config/ca.org2.tfs.at2chain.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server-config/e8e81c0fadfe529261b1173234daa8e125d0b9d708971a5ab431dc78a8c0b5f8_sk -b admin:adminpw -d'
+    volumes:
+      - /mnt/fabric/ca.org2:/var/hyperledger/production
+      - ./crypto-config/peerOrganizations/org2.tfs.at2chain.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.org2.tfs.at2chain.com
+    networks:
+      - at2chainnet
+
+  ca.org3:
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-ca:amd64-1.3.0
+    restart: always
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-core
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org3.tfs.at2chain.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/60d21c8306e5af4cb00bb231b809a0fd56568c04c835b023c77411f40f6b39c9_sk  
+    ports:
+      - "9054:7054"
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server-config/ca.org3.tfs.at2chain.com-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server-config/60d21c8306e5af4cb00bb231b809a0fd56568c04c835b023c77411f40f6b39c9_sk -b admin:adminpw -d'
+    volumes:
+      - /mnt/fabric/ca.org3:/var/hyperledger/production
+      - ./crypto-config/peerOrganizations/org3.tfs.at2chain.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.org3.tfs.at2chain.com
+    networks:
+      - at2chainnet
+
+  orderer.tfs.at2chain.com:
+    extends:
+      file:   base/docker-compose-base.yaml
+      service: orderer.tfs.at2chain.com
+    container_name: orderer.tfs.at2chain.com
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
+      - kafka1
+      - kafka2
+      - kafka3
+      - kafka4
+    networks:
+      - at2chainnet
+
+  couchdb.org1:
+    container_name: couchdb.org1
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-couchdb:amd64-0.4.13
+    restart: always
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=orderer-peer-ca
+    volumes:
+      - /mnt/fabric/couchdb.org1:/opt/couchdb/data
+    ports:
+      - "5984:5984"
+    networks:
+      - at2chainnet
+
+  peer0.org1.tfs.at2chain.com:
+    container_name: peer0.org1.tfs.at2chain.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.org1.tfs.at2chain.com
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.org1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin 
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=orderer-peer-ca
+    depends_on:
+      - couchdb.org1
+    networks:
+      - at2chainnet
+
+  couchdb.org2:
+    container_name: couchdb.org2
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-couchdb:amd64-0.4.13
+    restart: always
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=orderer-peer-ca
+    volumes:
+      - /mnt/fabric/couchdb.org2:/opt/couchdb/data
+    ports:
+      - "5904:5984"
+    networks:
+      - at2chainnet
+
+  peer0.org2.tfs.at2chain.com:
+    container_name: peer0.org2.tfs.at2chain.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.org2.tfs.at2chain.com
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.org2:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin 
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=orderer-peer-ca
+    depends_on:
+      - couchdb.org2
+    networks:
+      - at2chainnet
+
+  couchdb.org3:
+    container_name: couchdb.org3
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-couchdb:amd64-0.4.13
+    restart: always
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=orderer-peer-ca
+    volumes:
+    - /mnt/fabric/couchdb.org3:/opt/couchdb/data
+    ports:
+      - "5914:5984"
+    networks:
+      - at2chainnet
+
+  peer0.org3.tfs.at2chain.com:
+    container_name: peer0.org3.tfs.at2chain.com
+    extends:
+      file:  base/docker-compose-base.yaml
+      service: peer0.org3.tfs.at2chain.com
+    environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.org3:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin 
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=orderer-peer-ca
+    depends_on:
+      - couchdb.org3
+    networks:
+      - at2chainnet
+
+  cli:
+    container_name: cli
+    image: registry.cn-hangzhou.aliyuncs.com/at2chain/fabric-tools:amd64-1.3.0
+    restart: always
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_ID=peer0.org1.tfs.at2chain.com
+      - CORE_PEER_ADDRESS=peer0.org1.tfs.at2chain.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.tfs.at2chain.com/peers/peer0.org1.tfs.at2chain.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.tfs.at2chain.com/peers/peer0.org1.tfs.at2chain.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.tfs.at2chain.com/peers/peer0.org1.tfs.at2chain.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.tfs.at2chain.com/users/Admin@org1.tfs.at2chain.com/msp
+      - ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/tfs.at2chain.com/orderers/orderer.tfs.at2chain.com/msp/tlscacerts/tlsca.tfs.at2chain.com-cert.pem
+      - CORE_PEER_ADDRESSAUTODETECT=false
+      - GODEBUG=netdns=go
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    #command: /bin/bash -c './scripts/wait-for-it.sh orderer.tfs.at2chain.com:7050 -t 0; ./scripts/wait-for-it.sh peer0.core.tfs.at2chain.com:7051 -t 0; ./scripts/wait-for-it.sh peer1.core.tfs.at2chain.com:7051 -t 0;./scripts/wait-for-it.sh peer0.support.tfs.at2chain.com:7051 -t 0;./scripts/wait-for-it.sh peer1.support.tfs.at2chain.com:7051 -t 0; ./scripts/run-chaincode.sh ${CHANNEL_NAME} ${DELAY}; sleep 10000'
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./chaincode-token:/opt/gopath/src/bitbucket.org/at2chain/chaincode-token/
+        - ./chaincode-court-file-cert:/opt/gopath/src/bitbucket.org/at2chain/chaincode-court-file-cert/
+        - ./chaincode-trust:/opt/gopath/src/bitbucket.org/at2chain/chaincode-trust/
+        - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+        - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/
+    depends_on:
+      - orderer.tfs.at2chain.com
+      - peer0.org1.tfs.at2chain.com
+      - peer0.org2.tfs.at2chain.com
+      - peer0.org3.tfs.at2chain.com
+    networks:
+      - at2chainnet
+
+  zookeeper1:
+    container_name: zookeeper1
+    extends:
+      file: base/kafka-base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=1
+      - ZOO_SERVERS=server.1=0.0.0.0:2888:3888 server.2=zookeeper2:2888:3888 server.3=zookeeper3:2888:3888
+    volumes:
+      - /mnt/fabric/zk0/data:/data
+      - /mnt/fabric/zk0/log:/data-log
+    networks:
+      - at2chainnet
+
+  zookeeper2:
+    container_name: zookeeper2
+    extends:
+      file: base/kafka-base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=2
+      - ZOO_SERVERS=server.1=zookeeper1:2888:3888 server.2=0.0.0.0:2888:3888 server.3=zookeeper3:2888:3888
+    volumes:
+      - /mnt/fabric/zk1/data:/data
+      - /mnt/fabric/zk1/log:/data-log
+    networks:
+      - at2chainnet
+
+  zookeeper3:
+    container_name: zookeeper3
+    extends:
+      file: base/kafka-base.yaml
+      service: zookeeper
+    environment:
+      - ZOO_MY_ID=3
+      - ZOO_SERVERS=server.1=zookeeper1:2888:3888 server.2=zookeeper2:2888:3888 server.3=0.0.0.0:2888:3888
+    volumes:
+      - /mnt/fabric/zk2/data:/data
+      - /mnt/fabric/zk2/log:/data-log
+    networks:
+      - at2chainnet
+
+  kafka1:
+    container_name: kafka1
+    extends:
+      file: base/kafka-base.yaml
+      service: kafka
+    environment:
+      - KAFKA_BROKER_ID=0
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
+    networks:
+      - at2chainnet
+    volumes:
+      - /mnt/fabric/kafka0:/kafka-data
+
+  kafka2:
+    container_name: kafka2
+    extends:
+      file: base/kafka-base.yaml
+      service: kafka
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
+    networks:
+      - at2chainnet
+    volumes:
+      - /mnt/fabric/kafka1:/kafka-data
+
+  kafka3:
+    container_name: kafka3
+    extends:
+      file: base/kafka-base.yaml
+      service: kafka
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
+    networks:
+      - at2chainnet
+    volumes:
+      - /mnt/fabric/kafka2:/kafka-data
+
+  kafka4:
+    container_name: kafka4
+    extends:
+      file: base/kafka-base.yaml
+      service: kafka
+    environment:
+      - KAFKA_BROKER_ID=3
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
+    networks:
+      - at2chainnet
+    volumes:
+      - /mnt/fabric/kafka3:/kafka-data
+
